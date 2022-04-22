@@ -1,18 +1,34 @@
-## python 3
-# pip install plexapi
-# pip install pypinyin
-# 更多中文插件请访问plexmedia.cn
+#!/usr/bin/env python
+
+'''
+Description: Automatically generate pinyin sort title
+Requires: plexapi, pypinyin
+Usage: plex-pinyin-sort.py [-h] [-u URL] [-t TOKEN] [-s SECTION]
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -u URL, --url URL
+    -t TOKEN, --token TOKEN
+    -s SECTION, --section SECTION
+
+Tautulli script trigger:
+    * Notify on recently added
+
+Tautulli script arguments:
+    * Recently Added:
+        --section {section_id}
+'''
 
 import urllib
 import http.client
 import json
-import sys
+import argparse
+import os
+import xmltodict
 import pypinyin
 from plexapi.server import PlexServer
-from plexapi.myplex import MyPlexAccount
-from plexapi.myplex import MyPlexDevice
 
-
+PLEX_URL = ""
 PLEX_TOKEN = ""
 
 def fetchPlexApi(path='', method='GET', getFormPlextv=False, token=PLEX_TOKEN, params=None):
@@ -116,24 +132,33 @@ def loopThroughAllMovies():
                 SortTitle = changepinyin(title)
                 print(title)
                 updateSortTitle(key, SortTitle)
-                
+    print("Success!")
+
 if __name__ == '__main__':
 
-    #got token.url
-    print("欢迎使用PLEX中文排序，使用方法请访问：")
-    PLEX_URL = input('请输入你的plex服务器地址：')
-    PLEX_TOKEN = input('请输入你的token：')
-    # the plex server url
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-u', '--url')
+    parser.add_argument('-t', '--token')
+    parser.add_argument('-s', '--section')
+    opts = parser.parse_args()
+
+    PLEX_URL = opts.url or os.getenv('PLEX_URL', PLEX_URL)
+    PLEX_TOKEN = opts.token or os.getenv('PLEX_TOKEN', PLEX_TOKEN)
+
+    if not PLEX_URL:
+        PLEX_URL = input('请输入你的plex服务器地址：')
+
+    if not PLEX_TOKEN:
+        PLEX_TOKEN = input('请输入你的token：')
+
     plex = PlexServer(PLEX_URL, PLEX_TOKEN)
-    for section in plex.library.sections():
+
+    if not opts.section:
+        for section in plex.library.sections():
             if section.type == 'movie':
-               print(section)
+                print(section)
+        sectionNum = input('请输入你要排序的电影库编号：')
+    else:
+        sectionNum = opts.section
 
-    #choose list
-    sectionNum = input('请输入你要排序的电影库编号：')
-    
-
-    # run at startup
     loopThroughAllMovies()
-    
-
