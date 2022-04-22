@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 '''
-Description: Automatically generate pinyin sort title
+Description: Automatically generate pinyin sort title for Chinese movie library
+Author: timmy0209
+Maintainer: sjtuross
 Requires: plexapi, pypinyin
 Usage: plex-pinyin-sort.py [-h] [-u URL] [-t TOKEN] [-s SECTION]
 
@@ -82,17 +84,12 @@ def updateSortTitle(rating,item):
     sortQuery =urllib.parse.quote(item.encode('utf-8'))                                
     data = fetchPlexApi("/library/sections/"+sectionNum+"/all?type=1&id=%s&titleSort.value=%s&"%(rating,sortQuery), "PUT",token=PLEX_TOKEN) 
 
-def uniqify(seq):
-    # Not order preserving
-    keys = {}
-    for e in seq:
-        keys[e] = 1
-    return keys.keys()
-def check_contain_chinese(check_str):                           #判断是否包含中文字符
+def check_contain_chinese(check_str):
      for ch in check_str:
          if '\u4e00' <= ch <= '\u9fff':
              return True
      return False
+
 def changepinyin (title):
     a = pypinyin.pinyin(title, style=pypinyin.FIRST_LETTER)
     b = []
@@ -100,6 +97,7 @@ def changepinyin (title):
         b.append(str(a[i][0]).upper())
     c = ''.join(b)
     return c
+
 def loopThroughAllMovies():
     toDo = True
     start = 0
@@ -116,22 +114,21 @@ def loopThroughAllMovies():
             start = start + size        
             if totalSize-offset-size == 0:
                 toDo = False
-            #    print(toDo)
             # loop through all elements
             for movie in elements:
                 mediaType = movie["type"]
                 if mediaType != "movie":
                     continue
-                if 'titleSort' in movie:                        #判断是否已经有标题
-                    con = movie["titleSort"]
-                    if (check_contain_chinese(con)):
-                            continue
-                    continue
-                key = movie["ratingKey"]        
+                if 'titleSort' in movie:
+                    titleSort = movie["titleSort"]
+                    if not check_contain_chinese(titleSort):
+                        continue
                 title = movie["title"]
-                SortTitle = changepinyin(title)
-                print(title)
-                updateSortTitle(key, SortTitle)
+                if check_contain_chinese(title):
+                    titleSort = changepinyin(title)
+                    print(title)
+                    key = movie["ratingKey"]        
+                    updateSortTitle(key, titleSort)
     print("Success!")
 
 if __name__ == '__main__':
@@ -146,10 +143,10 @@ if __name__ == '__main__':
     PLEX_TOKEN = opts.token or os.getenv('PLEX_TOKEN', PLEX_TOKEN)
 
     if not PLEX_URL:
-        PLEX_URL = input('请输入你的plex服务器地址：')
+        PLEX_URL = input('Enter Plex Server Url:')
 
     if not PLEX_TOKEN:
-        PLEX_TOKEN = input('请输入你的token：')
+        PLEX_TOKEN = input('Enter Plex Server Token:')
 
     plex = PlexServer(PLEX_URL, PLEX_TOKEN)
 
@@ -157,7 +154,7 @@ if __name__ == '__main__':
         for section in plex.library.sections():
             if section.type == 'movie':
                 print(section)
-        sectionNum = input('请输入你要排序的电影库编号：')
+        sectionNum = input('Enter Movie Library Section Id:')
     else:
         sectionNum = opts.section
 
